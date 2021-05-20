@@ -115,19 +115,25 @@ def emit_link(
 
     # Process x_defs, either adding them directly to linker options, or
     # saving them to process through stamping support.
-    stamp_x_defs = False
+    stamp_stable, stamp_volatile = False, False
     for k, v in archive.x_defs.items():
         if go.stamp and v.startswith("{") and v.endswith("}"):
             builder_args.add("-Xstamp", "%s=%s" % (k, v[1:-1]))
-            stamp_x_defs = True
+            if v.startswith("{STABLE_"):
+                stamp_stable = True
+            else:
+                stamp_volatile = True
         else:
             builder_args.add("-X", "%s=%s" % (k, v))
 
     # Stamping support
     stamp_inputs = []
-    if stamp_x_defs:
-        stamp_inputs = [info_file, version_file]
-        builder_args.add_all(stamp_inputs, before_each = "-stamp")
+    if stamp_stable:
+        stamp_inputs.append(info_file)
+        builder_args.add("-stamp", info_file)
+    if stamp_volatile:
+        stamp_inputs.append(version_file)
+        builder_args.add("-stamp", version_file)
 
     builder_args.add("-o", executable)
     builder_args.add("-main", archive.data.file)
